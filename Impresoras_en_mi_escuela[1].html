@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ubicación de Impresoras - CETIS 73</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            scroll-behavior: smooth;
+        }
+        header {
+            text-align: center;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            text-align: center;
+            border-top: 5px solid #2a5298;
+            margin-bottom: 30px;
+        }
+        .instruccion-mapa {
+            font-size: 0.95em;
+            color: #555;
+            background-color: #eff6ff;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3b82f6;
+            text-align: left;
+        }
+
+        /* CONTENEDOR DEL MAPA */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 780px;
+            margin: 0 auto;
+            border: 3px solid #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #1e293b;
+        }
+        .map-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* ZONAS CLICABLES DEL MAPA */
+        .zone-hotspot {
+            position: absolute;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .zone-alta {
+            background-color: rgba(37, 99, 235, 0.4);
+            border: 2px solid rgba(37, 99, 235, 0.9);
+            color: #ffffff;
+        }
+        .zone-alta:hover {
+            background-color: rgba(37, 99, 235, 0.7);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .zone-baja {
+            background-color: rgba(5, 150, 105, 0.4);
+            border: 2px solid rgba(5, 150, 105, 0.9);
+            color: #ffffff;
+        }
+        .zone-baja:hover {
+            background-color: rgba(5, 150, 105, 0.7);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        /* ESTILOS PARA LAS VENTANAS FLOTANTES (MODALES) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal:target {
+            display: flex; 
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        /* Estilo para las imágenes dentro de las tarjetas */
+        .printer-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            background-color: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .printer-card img:hover {
+            opacity: 0.85;
+        }
+
+        /* MODAL DE ZOOM AMPLIADO CON FONDO MUY OSCURO (95%) */
+        .modal-img-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .modal-img-container:target {
+            display: flex;
+        }
+        
+        .modal-img-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-img-content img {
+            max-width: 95%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 6px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .printer-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .close-btn:hover {
+            color: #e74c3c;
+        }
+
+        .close-btn-zoom {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 36px;
+            text-decoration: none;
+            color: #ffffff;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2100;
+        }
+        .close-btn-zoom:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ff6b6b;
+        }
+
+        /* ESTILOS PARA LA SECCIÓN DE CONCLUSIÓN Y TABLA */
+        .conclusion-section {
+            border-top: 5px solid #059669;
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95em;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #1e3c72;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <strong>Las impresoras de mi escuela</strong>
+        </h1>
+        <p>CETIS No. 73 — Edificio A</p>
+    </header>
+
+    <div class="container">
+        <h2>Croquis del Plantel</h2>
+        <div class="instruccion-mapa">
+            💡 <b>Instrucciones:</b> Haz clic en los recuadros específicos del mapa para ver los detalles de cada área.
+        </div>
+        
+        <!-- Contenedor del mapa -->
+        <div class="map-wrapper">
+            <img src="Img/Mapa.jpg" alt="Croquis CETIS 73">
+
+            <a href="#modal-planta-alta" class="zone-hotspot zone-alta" style="top: 56%; left: 58%; width: 3%; height: 8%;"></a>
+            <a href="#modal-planta-baja" class="zone-hotspot zone-baja" style="top: 56%; left: 63%; width: 4%; height: 8%;"></a>
+        </div>
+    </div>
+
+    <!-- ================= SECCIÓN DE CONCLUSIÓN Y TABLA ================= -->
+    <div id="conclusion" class="container conclusion-section">
+        <h2 style="color: #059669; margin-top: 0;">Conclusión</h2>
+        <p style="color: #555; text-align: left; font-size: 0.95em;">
+            A continuación se presenta un análisis comparativo de los costos aproximados de adquisición y consumibles de las impresoras analizadas en el plantel:
+        </p>
+        
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Modelo de Impresora</th>
+                        <th>Costo Aprox.</th>
+                        <th>Ideal para...</th>
+                        <th>Costo de Consumibles</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>HP LaserJet Pro p1102w</b><br><small style="color:#666;">(Miguel Angel)</small></td>
+                        <td>$1000~$15000</td>
+                        <td>Oficina</td>
+                        <td><b>Tóner (HP 85A):</b><br>$200~$1800</td>
+                    </tr>
+                    <tr>
+                        <td><b>Brother DCP-J100</b><br><small style="color:#666;">(Ponce)</small></td>
+                        <td>$1500</td>
+                        <td>Oficinas/hogar</td>
+                        <td><b>Tinta (LC509 / LC505):</b><br>Negra: $174~$350<br>Color: $174~$350</td>
+                    </tr>
+                    <tr>
+                        <td><b>Canon PIXMA G1100</b><br><small style="color:#666;">(Ponce)</small></td>
+                        <td>Alrededor de $2400</td>
+                        <td>Hogar</td>
+                        <td><b>Tinta (Canon GI-190):</b><br>Negra: $269<br>Color: $880~$1400</td>
+                    </tr>
+                    <tr>
+                        <td><b>HP LaserJet Pro p1109w</b><br><small style="color:#666;">(Carlitos)</small></td>
+                        <td>$7000~$10000</td>
+                        <td>Oficina</td>
+                        <td><b>Tóner (HP 85A):</b><br>$200~$1800</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="text-align: center; margin-top: 25px;">
+            <a href="#" style="color: #2a5298; text-decoration: none; font-weight: bold;">⬆ Volver arriba</a>
+        </div>
+    </div>
+
+    <!-- ================= VENTANA: PLANTA ALTA (O.E) ================= -->
+    <div id="modal-planta-alta" class="modal">
+        <div class="modal-content">
+            <a href="#" class="close-btn">&times;</a>
+            <h3 style="color: #2563eb; margin-top: 0;">Orientación Educativa</h3>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Impresora asignada a esta zona:</p>
+
+            <div class="printer-card">
+                <h4 style="color: #d97706; margin: 0 0 5px 0;">Impresora de Miguel Angel</h4>
+                <a href="#zoom-hp1102w">
+                    <img src="Img/hp1102w.jpg" alt="Impresora HP 1102w" title="Haz clic para ampliar">
+                </a>
+                <p style="font-size: 0.8em; color: #666; text-align: center; margin: 0 0 8px 0;">🔍 Toca la imagen para ver en pantalla completa</p>
+                <p style="margin: 4px 0;"><b>Modelo:</b> HP LaserJet Pro p1102w</p>
+                <p style="margin: 4px 0;"><b>Consumible:</b> Tóner HP 85A</p>
+                <p style="margin: 4px 0;"><b>Estado:</b> <span style="color: #059669; font-weight: bold;">Sin Fallas</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= VENTANA: PLANTA BAJA (Servicios Escolares) ================= -->
+    <div id="modal-planta-baja" class="modal">
+        <div class="modal-content">
+            <a href="#" class="close-btn">&times;</a>
+            <h3 style="color: #059669; margin-top: 0;">Servicios Escolares</h3>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">Impresoras ubicadas en esta zona:</p>
+
+            <div class="printer-card">
+                <h4 style="color: #059669; margin: 0 0 5px 0;">1. Impresora de Ponce</h4>
+                <a href="#zoom-brother">
+                    <img src="Img/brother.jpg" alt="Impresora Brother" title="Haz clic para ampliar">
+                </a>
+                <p style="font-size: 0.8em; color: #666; text-align: center; margin: 0 0 8px 0;">🔍 Toca la imagen para ver en pantalla completa</p>
+                <p style="margin: 4px 0;"><b>Modelo:</b> Brother DCP-J100</p>
+                <p style="margin: 4px 0;"><b>Consumible:</b> Tinta LC509 / LC505</p>
+                <p style="margin: 4px 0;"><b>Estado:</b> <span style="color: #059669; font-weight: bold;">Sin Fallas</span></p>
+            </div>
+
+            <div class="printer-card">
+                <h4 style="color: #059669; margin: 0 0 5px 0;">2. Impresora de Ponce</h4>
+                <a href="#zoom-canon">
+                    <img src="Img/canong1100.jpg" alt="Impresora Canon G1100" title="Haz clic para ampliar">
+                </a>
+                <p style="font-size: 0.8em; color: #666; text-align: center; margin: 0 0 8px 0;">🔍 Toca la imagen para ver en pantalla completa</p>
+                <p style="margin: 4px 0;"><b>Modelo:</b> Canon PIXMA G1100</p>
+                <p style="margin: 4px 0;"><b>Consumible:</b> Tinta Canon GI-190</p>
+                <p style="margin: 4px 0;"><b>Estado:</b> <span style="color: #059669; font-weight: bold;">Sin Fallas</span></p>
+            </div>
+
+            <div class="printer-card">
+                <h4 style="color: #059669; margin: 0 0 5px 0;">3. Impresora de Carlitos</h4>
+                <a href="#zoom-hp1109w">
+                    <img src="Img/hp1109w.jpg" alt="Impresora HP 1109w" title="Haz clic para ampliar">
+                </a>
+                <p style="font-size: 0.8em; color: #666; text-align: center; margin: 0 0 8px 0;">🔍 Toca la imagen para ver en pantalla completa</p>
+                <p style="margin: 4px 0;"><b>Modelo:</b> HP LaserJet Pro p1109w</p>
+                <p style="margin: 4px 0;"><b>Consumible:</b> Tóner HP 85A</p>
+                <p style="margin: 4px 0;"><b>Estado:</b> <span style="color: #059669; font-weight: bold;">Sin fallas</span></p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= VISORES DE ZOOM EN PANTALLA COMPLETA ================= -->
+    
+    <!-- Zoom HP 1102w -->
+    <div id="zoom-hp1102w" class="modal-img-container">
+        <a href="#modal-planta-alta" class="close-btn-zoom">&times;</a>
+        <div class="modal-img-content">
+            <img src="Img/hp1102w.jpg" alt="HP 1102w Pantalla Completa">
+        </div>
+    </div>
+
+    <!-- Zoom Brother -->
+    <div id="zoom-brother" class="modal-img-container">
+        <a href="#modal-planta-baja" class="close-btn-zoom">&times;</a>
+        <div class="modal-img-content">
+            <img src="Img/brother.jpg" alt="Brother Pantalla Completa">
+        </div>
+    </div>
+
+    <!-- Zoom Canon -->
+    <div id="zoom-canon" class="modal-img-container">
+        <a href="#modal-planta-baja" class="close-btn-zoom">&times;</a>
+        <div class="modal-img-content">
+            <img src="Img/canong1100.jpg" alt="Canon Pantalla Completa">
+        </div>
+    </div>
+
+    <!-- Zoom HP 1109w -->
+    <div id="zoom-hp1109w" class="modal-img-container">
+        <a href="#modal-planta-baja" class="close-btn-zoom">&times;</a>
+        <div class="modal-img-content">
+            <img src="Img/hp1109w.jpg" alt="HP 1109w Pantalla Completa">
+        </div>
+    </div>
+
+</body>
+</html>
